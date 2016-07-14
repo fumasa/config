@@ -1,45 +1,7 @@
-const CONFIG_SEPARETOR = process.env.CONFIG_SEPARETOR || '.'
+const CONFIG_CACHE_INTERVAL = process.env.CONFIG_UPDATE_INTERVAL || 5
 
 const ajax = require('yeller-ajaxcall')
-const d3 = require('d3')
 const urljoin = require('url-join')
-
-function getValues (config, parent) {
-  var values = []
-  var keys = d3.keys(config)
-  if (typeof config === 'object') {
-    for (var i = 0; i < keys.length; i++) {
-      if (typeof config[keys[i]] === 'object') {
-        var newValue = getValues(config[keys[i]], (parent ? parent + CONFIG_SEPARETOR : '') + keys[i])
-        values = values.concat(newValue)
-      } else {
-        values.push({ key: (parent ? parent + CONFIG_SEPARETOR : '') + keys[i], value: config[keys[i]] })
-      }
-    }
-    return values
-  } else {
-    return config
-  }
-}
-
-function getObj (fromdb, obj) {
-  obj = obj || fromdb.filter(function (val) {
-    return val.indexOf(CONFIG_SEPARETOR) > -1
-  }).reduce(function (memo, value) {
-    memo[value.key] = value.value
-    return memo
-  }, [])
-  if (typeof fromdb === 'object') {
-    return getObj(fromdb.filter(function (val) {
-      return val.indexOf(CONFIG_SEPARETOR) !== -1
-    }).reduce(function (memo, value) {
-      memo.push({ key: value.key.substring(0, value.key.indexOf(CONFIG_SEPARETOR)), value: value.value })
-      return memo
-    }), obj)
-  } else {
-    return obj
-  }
-}
 
 function WaterfallOver (list, iterator, callback) {
   var nextItemIndex = 0
@@ -54,50 +16,61 @@ function WaterfallOver (list, iterator, callback) {
   iterator(list[0], report)
 }
 
-function getDBValues (api, values, cb) {
-  var list = []
+module.exports = function (cfg, api) {
+  var values = []
+  for (var prop in cfg) {
+    values.push({ key: prop, value: cfg[prop] })
+  }
+  console.debug(values)
   WaterfallOver(values, function (value, report) {
-    ajax.get(urljoin(api, '/config/', value.key), function (v) {
-      list.push({ key: value.key, value: v })
+    ajax.get(urljoin(api, 'config', value.key), function (data) {
+      if (data === null) {
+        ajax.post(urljoin(api, 'configs'), { key: value.key, value: JSON.stringify(value.value) }, function () {
+          console.debug('configuration created %s', value.key)
+        })
+      }
       report()
-    }, function (erro) {
-      console.error(erro)
     })
   }, function () {
-    cb(list)
+    console.debug('configuration saved!')
   })
-}
-
-function setDBValues (api, defaultValues, fromdb, cb) {
-  var list = []
-  WaterfallOver(fromdb, function (value, report) {
-    if (value.value === null) {
-      value = defaultValues.filter(function (val) {
-        return val.key === value.key
-      })[0]
-      list.push(value)
-      ajax.post(urljoin(api, '/configs/'), value, function () {
-        report()
+  return {
+    _api: api,
+    _cache: {},
+    _getDB: function (cb) {
+      ajax.get(urljoin(this._api, '/configs'), function (v) {
+        cb(null, v)
       }, function (erro) {
         console.error(erro)
+        cb(erro)
       })
-    } else {
-      list.push(value)
-      report()
+    },
+    _parseJSON: function (text) {
+      try {
+        return JSON.parse(text)
+      } catch (e) {
+        return text
+      }
+    },
+    value: function (cb) {
+      var now = new Date()
+      now.setMinutes(now.getMinutes() - CONFIG_CACHE_INTERVAL)
+      if (this._cache !== undefined && this._cache.updated > now) {
+        return (cb(this._cache.value, { from: 'cache' }))
+      } else {
+        var config = this
+        this._getDB(function (err, values) {
+          if (err) console.error(err)
+          else {
+            var cacheData = values.reduce(function (memo, value) {
+              memo[value.key] = config._parseJSON(value.value)
+              return memo
+            }, {})
+            config._cache = { updated: new Date(), value: cacheData }
+            return (cb(config._cache.value, { from: 'database' }))
+          }
+        })
+      }
     }
-  }, function () {
-    cb(list)
-  })
-}
-
-module.exports = function (cfg, api) {
-  const _default = cfg
-  var _values = getValues(cfg)
-  getDBValues(api, _values, function (_fromdb) {
-    setDBValues(api, _values, _fromdb, function (_todb) {
-      _values = getObj(_todb)
-      console.debug('yeller-config', _values)
-    })
-  })
-  return _default
+  }
 }
