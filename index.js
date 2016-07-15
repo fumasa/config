@@ -21,7 +21,6 @@ module.exports = function (cfg, api) {
   for (var prop in cfg) {
     values.push({ key: prop, value: cfg[prop] })
   }
-  console.debug(values)
   WaterfallOver(values, function (value, report) {
     ajax.get(urljoin(api, 'config', value.key), function (data) {
       if (data === null) {
