@@ -19,6 +19,6 @@
   "license": "MIT",
   "dependencies": {
     "url-join": "^1.1.0",
-    "yeller-ajaxcall": "git+https://github.com/fumasa/yeller-ajaxcall.git"
+    "ajaxcall": "git+https://github.com/fumasa/ajaxcall.git"
   }
 }
