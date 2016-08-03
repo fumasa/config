@@ -1,5 +1,5 @@
 {
-  "name": "yeller-config",
+  "name": "config",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -13,12 +13,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://8a5b5820b2d648eb126fdc003cbe3a5e1c3bd4d9:x-oauth-basic@github.com/fumasa/yeller-config.git"
+    "url": "git+https://github.com/fumasa/config.git"
   },
   "author": "Rafael 'fumasa' Giorgetti <rafael@wakedown.org>",
   "license": "MIT",
   "dependencies": {
     "url-join": "^1.1.0",
-    "yeller-ajaxcall": "git+https://8a5b5820b2d648eb126fdc003cbe3a5e1c3bd4d9:x-oauth-basic@github.com/fumasa/yeller-ajaxcall.git"
+    "yeller-ajaxcall": "git+https://github.com/fumasa/yeller-ajaxcall.git"
   }
 }

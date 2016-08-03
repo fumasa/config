@@ -1,6 +1,6 @@
 const CONFIG_CACHE_INTERVAL = process.env.CONFIG_UPDATE_INTERVAL || 5
 
-const ajax = require('yeller-ajaxcall')
+const ajax = require('ajaxcall')
 const urljoin = require('url-join')
 
 function WaterfallOver (list, iterator, callback) {
